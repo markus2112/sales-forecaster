@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adversarial Sales Forecaster</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar reveal">
+            <div class="brand">
+                <div class="brand-mark"></div>
+                <div class="brand-copy">
+                    <strong>Adversarial</strong>
+                    <span>Sales Forecaster</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav">
+                <button type="button" class="nav-link active" data-scroll-target="heroBanner">
+                    <span class="nav-icon"></span>
+                    <span>Home</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="kpiSection">
+                    <span class="nav-icon"></span>
+                    <span>Dashboard</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="forecastPanel">
+                    <span class="nav-icon"></span>
+                    <span>Forecast Explorer</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="scenarioPanel">
+                    <span class="nav-icon"></span>
+                    <span>Scenario Simulator</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="quickActions">
+                    <span class="nav-icon"></span>
+                    <span>Data Management</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="robustnessPanel">
+                    <span class="nav-icon"></span>
+                    <span>Models &amp; Robustness</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="quickActions">
+                    <span class="nav-icon"></span>
+                    <span>Reports</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="quickActions">
+                    <span class="nav-icon"></span>
+                    <span>Alerts</span>
+                </button>
+                <button type="button" class="nav-link" data-scroll-target="quickActions">
+                    <span class="nav-icon"></span>
+                    <span>Settings</span>
+                </button>
+            </nav>
+
+            <div class="sidebar-spacer"></div>
+
+            <div class="sidebar-promo">
+                <div class="sidebar-promo-icon"></div>
+                <h3>Build robust forecasts.</h3>
+                <p>Stress test assumptions. Stay ahead of uncertainty with adversarial forecasting.</p>
+                <button type="button" class="sidebar-cta" data-action="forecast" data-endpoint="/hybrid-forecast/">Explore Now</button>
+            </div>
+
+            <div class="sidebar-user">
+                <div class="sidebar-user-avatar">R</div>
+                <div class="sidebar-user-copy">
+                    <strong>Ronak</strong>
+                    <span>Data Analyst</span>
+                </div>
+                <span class="sidebar-user-caret"></span>
+            </div>
+
+            <div class="sr-only" aria-hidden="true">
+                <span id="featureCount">0</span>
+                <span id="featureCountDisplay">0</span>
+                <span id="modelState">Waiting</span>
+                <span id="modelStateDisplay">Waiting</span>
+                <span id="anomalyState">None</span>
+                <span id="anomalyStateDisplay">None</span>
+                <ul id="activityList">
+                    <li>Waiting for the first action.</li>
+                </ul>
+            </div>
+        </aside>
+
+        <main class="main-shell">
+            <header class="topbar reveal">
+                <div class="title-block">
+                    <h1 id="greetingTitle">Good morning, Ronak! <span class="wave-hand">👋</span></h1>
+                    <p>Here&apos;s your sales forecast overview and key insights.</p>
+                </div>
+
+                <div class="top-controls">
+                    <label class="control-shell">
+                        <span class="control-icon calendar"></span>
+                        <select aria-label="Date range">
+                            <option>May 1 - May 31, 2024</option>
+                            <option>Last 30 Days</option>
+                            <option>Quarter to Date</option>
+                        </select>
+                    </label>
+
+                    <label class="control-shell">
+                        <span class="control-icon filter"></span>
+                        <select aria-label="Product filter">
+                            <option>All Products</option>
+                            <option>Retail Forecast</option>
+                            <option>Enterprise Forecast</option>
+                        </select>
+                    </label>
+
+                    <button type="button" class="primary-top-button" data-scroll-target="scenarioPanel">New Scenario</button>
+                </div>
+            </header>
+
+            <section class="hero-banner reveal" id="heroBanner">
+                <div class="hero-copy">
+                    <h2>Forecast with Confidence.<br>Stress every scenario.</h2>
+                    <p class="hero-text">
+                        Leverage adversarial AI to test worst-case scenarios,
+                        quantify risk, and make smarter business decisions.
+                    </p>
+
+                    <div class="hero-status-row">
+                        <span class="status-pill" id="apiStatusPill">Checking API...</span>
+                        <span class="status-pill muted" id="lastActionPill">No actions yet</span>
+                    </div>
+                </div>
+
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="hero-grid"></div>
+                    <div class="hero-visual-stack layer-back"></div>
+                    <div class="hero-visual-stack layer-mid"></div>
+                    <div class="hero-visual-stack layer-front"></div>
+
+                    <svg class="hero-chart-graphic" viewBox="0 0 560 220">
+                        <path d="M20 150 C70 126 98 176 150 154 C198 134 218 92 266 118 C314 143 338 176 388 148 C430 124 464 80 530 96" fill="none" stroke="rgba(255,255,255,0.88)" stroke-width="3" stroke-linecap="round" stroke-dasharray="3 8"></path>
+                        <path d="M22 178 C74 166 92 122 138 132 C184 142 206 200 258 180 C300 164 334 120 384 132 C432 144 472 188 530 118" fill="none" stroke="rgba(109,78,255,0.82)" stroke-width="6" stroke-linecap="round"></path>
+                    </svg>
+
+                    <div class="trust-chip trust-top">Stress-tested</div>
+                    <div class="trust-chip trust-mid">Robust</div>
+                    <div class="trust-chip trust-bottom">Reliable</div>
+
+                    <div class="hero-shield">
+                        <div class="hero-shield-core"></div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="kpi-row reveal" id="kpiSection">
+                <article class="metric-card">
+                    <div class="metric-icon icon-forecast"></div>
+                    <div class="metric-copy">
+                        <span>Total Forecast Value</span>
+                        <strong id="totalForecastValue">$24.8M</strong>
+                        <small id="totalForecastTrend" class="metric-trend positive">+12.6% vs Apr</small>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon icon-accuracy"></div>
+                    <div class="metric-copy">
+                        <span>Forecast Accuracy (MAPE)</span>
+                        <strong id="accuracyValue">8.74%</strong>
+                        <small id="accuracyTrend" class="metric-trend positive">Lower is better</small>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon icon-robustness"></div>
+                    <div class="metric-copy">
+                        <span>Robustness Score</span>
+                        <strong id="robustnessValue">87 / 100</strong>
+                        <small id="robustnessTrend" class="metric-trend positive">High resilience</small>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon icon-impact"></div>
+                    <div class="metric-copy">
+                        <span>Worst-case Revenue Impact</span>
+                        <strong id="worstCaseValue">-$3.42M</strong>
+                        <small id="worstCaseTrend" class="metric-trend negative">Stress downside</small>
+                    </div>
+                </article>
+
+                <article class="metric-card">
+                    <div class="metric-icon icon-scenarios"></div>
+                    <div class="metric-copy">
+                        <span>Active Scenarios</span>
+                        <strong id="activeScenariosValue">5</strong>
+                        <small id="activeScenariosTrend" class="metric-trend neutral">View all active risks</small>
+                    </div>
+                </article>
+            </section>
+
+            <section class="analytics-grid">
+                <article class="panel-card chart-panel reveal" id="forecastPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Forecast vs Actual <span class="info-dot">i</span></h3>
+                            <p id="chartSourceNote">Rendering a polished preview until live data is loaded.</p>
+                        </div>
+                        <div class="panel-toolbar">
+                            <button type="button" class="panel-select-button" data-action="features" data-endpoint="/generate-features/">Daily</button>
+                            <button type="button" class="panel-icon-button" data-action="forecast" data-endpoint="/hybrid-forecast/">⋮</button>
+                        </div>
+                    </div>
+
+                    <div class="legend-row">
+                        <span><i class="legend-swatch actual"></i>Actual Sales</span>
+                        <span><i class="legend-swatch base"></i>Forecast (Base)</span>
+                        <span><i class="legend-swatch worst"></i>Worst-case Forecast</span>
+                    </div>
+
+                    <div class="chart-stage">
+                        <svg id="trendChart" viewBox="0 0 760 320" preserveAspectRatio="none" aria-label="Forecast versus actual chart"></svg>
+                    </div>
+
+                    <div class="chart-footer">
+                        <article class="summary-card">
+                            <span>Insight</span>
+                            <strong id="insightText">Forecast tracking slightly above actual demand.</strong>
+                        </article>
+                        <article class="summary-card">
+                            <span>Biggest Deviation</span>
+                            <strong id="deviationValue">May 18 | +18.6%</strong>
+                        </article>
+                        <article class="summary-card">
+                            <span>Confidence (Base)</span>
+                            <strong id="confidenceValue">82%</strong>
+                        </article>
+                    </div>
+                </article>
+
+                <article class="panel-card robustness-panel reveal" id="robustnessPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Robustness &amp; Stress Test <span class="info-dot">i</span></h3>
+                            <p>Model performance under adversarial conditions.</p>
+                        </div>
+                        <button type="button" class="link-button" data-action="evaluate" data-endpoint="/evaluate-models/">View details</button>
+                    </div>
+
+                    <div class="robustness-top">
+                        <div class="score-ring" id="robustnessRing">
+                            <div class="score-center">
+                                <strong id="robustnessScoreLarge">87</strong>
+                                <span>/100</span>
+                            </div>
+                        </div>
+
+                        <div class="score-copy">
+                            <h4 id="robustnessLabel">High Robustness</h4>
+                            <p id="robustnessDescription">Model performs well under adversarial conditions.</p>
+                        </div>
+                    </div>
+
+                    <div class="stress-list" id="stressList"></div>
+                </article>
+
+                <article class="panel-card scenario-panel reveal" id="scenarioPanel">
+                    <div class="panel-header">
+                        <div>
+                            <h3>Top Adversarial Scenarios</h3>
+                            <p>Highest-impact scenarios ranked by revenue risk.</p>
+                        </div>
+                        <button type="button" class="link-button" data-scroll-target="quickActions">View all</button>
+                    </div>
+
+                    <div class="scenario-list" id="scenarioList"></div>
+                </article>
+            </section>
+
+            <section class="quick-actions reveal" id="quickActions">
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Forecast Explorer</h4>
+                    <p>Dive deep into forecasts with interactive charts and filters.</p>
+                    <button type="button" class="feature-button" data-scroll-target="forecastPanel">Explore</button>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Scenario Simulator</h4>
+                    <p>Create adversarial simulations to test assumptions before decisions.</p>
+                    <button type="button" class="feature-button" data-scroll-target="scenarioPanel">Simulate</button>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Data Overview</h4>
+                    <p>Upload, inspect, and manage your sales data and engineered features.</p>
+                    <button type="button" class="feature-button" data-action="features" data-endpoint="/generate-features/">View Data</button>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Models &amp; Robustness</h4>
+                    <p>Evaluate model performance and resilience under stress tests.</p>
+                    <div class="feature-button-row">
+                        <button type="button" class="feature-button" data-action="xgboost" data-endpoint="/train-xgboost/">Train XGB</button>
+                        <button type="button" class="feature-button" data-action="lstm" data-endpoint="/train-lstm/">Train LSTM</button>
+                        <button type="button" class="feature-button" data-action="evaluate" data-endpoint="/evaluate-models/">Analyze</button>
+                    </div>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Reports</h4>
+                    <p>Generate detailed reports and share performance insights with teams.</p>
+                    <button type="button" class="feature-button" data-action="evaluate" data-endpoint="/evaluate-models/">View Reports</button>
+                </article>
+
+                <article class="feature-card">
+                    <div class="feature-icon"></div>
+                    <h4>Alerts &amp; Insights</h4>
+                    <p>Stay updated with critical alerts and actionable forecasting signals.</p>
+                    <button type="button" class="feature-button" data-action="forecast" data-endpoint="/hybrid-forecast/">View Alerts</button>
+                </article>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

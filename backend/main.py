@@ -1,6 +1,9 @@
 import traceback
+from pathlib import Path
 import pandas as pd
 from fastapi import FastAPI, Depends
+from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -25,7 +28,11 @@ from backend.models import (
     load_scaler
 )
 
+BASE_DIR = Path(__file__).resolve().parent.parent
+FRONTEND_DIR = BASE_DIR / "frontend"
+
 app = FastAPI()
+app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
 # ---------------- GLOBAL MODELS ----------------
 xgb_model = None
@@ -34,9 +41,33 @@ lstm_scaler = None
 
 
 # ---------------- HOME ----------------
-@app.get("/")
+@app.get("/", include_in_schema=False)
 def home():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/styles.css", include_in_schema=False)
+def frontend_styles():
+    return FileResponse(FRONTEND_DIR / "styles.css", media_type="text/css")
+
+
+@app.get("/app.js", include_in_schema=False)
+def frontend_script():
+    return FileResponse(FRONTEND_DIR / "app.js", media_type="application/javascript")
+
+
+@app.get("/api/health")
+def api_health():
     return {"message": "API connected to database"}
+
+
+@app.get("/api/status")
+def api_status():
+    return {
+        "xgboost_loaded": xgb_model is not None,
+        "lstm_loaded": lstm_model is not None,
+        "scaler_loaded": lstm_scaler is not None
+    }
 
 
 # ---------------- INSERT ----------------
