@@ -32,6 +32,35 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
 app = FastAPI()
+
+# ---------------- CREATE TABLE ----------------
+@app.get("/create-table/")
+def create_table(db: Session = Depends(get_db)):
+    try:
+        query = text("""
+            CREATE TABLE IF NOT EXISTS sales_data (
+                id SERIAL PRIMARY KEY,
+                date DATE NOT NULL,
+                sales FLOAT NOT NULL,
+                promotion BOOLEAN NOT NULL,
+                stock INTEGER NOT NULL,
+                holiday BOOLEAN NOT NULL
+            )
+        """)
+
+        db.execute(query)
+        db.commit()
+
+        return {
+            "message": "Table created successfully"
+        }
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return {
+            "error": str(e)
+        }
+
 app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
 # ---------------- GLOBAL MODELS ----------------
@@ -48,17 +77,25 @@ def home():
 
 @app.get("/styles.css", include_in_schema=False)
 def frontend_styles():
-    return FileResponse(FRONTEND_DIR / "styles.css", media_type="text/css")
+    return FileResponse(
+        FRONTEND_DIR / "styles.css",
+        media_type="text/css"
+    )
 
 
 @app.get("/app.js", include_in_schema=False)
 def frontend_script():
-    return FileResponse(FRONTEND_DIR / "app.js", media_type="application/javascript")
+    return FileResponse(
+        FRONTEND_DIR / "app.js",
+        media_type="application/javascript"
+    )
 
 
 @app.get("/api/health")
 def api_health():
-    return {"message": "API connected to database"}
+    return {
+        "message": "API connected to database"
+    }
 
 
 @app.get("/api/status")
@@ -78,8 +115,10 @@ def add_sales(data: SalesData, db: Session = Depends(get_db)):
         anomaly_flag = detect_anomaly(data.sales)
 
         query = text("""
-            INSERT INTO sales_data (date, sales, promotion, stock, holiday)
-            VALUES (:date, :sales, :promotion, :stock, :holiday)
+            INSERT INTO sales_data
+            (date, sales, promotion, stock, holiday)
+            VALUES
+            (:date, :sales, :promotion, :stock, :holiday)
         """)
 
         db.execute(query, {
@@ -99,15 +138,24 @@ def add_sales(data: SalesData, db: Session = Depends(get_db)):
 
     except Exception as e:
         print(traceback.format_exc())
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
 # ---------------- DATA FETCH ----------------
 def get_clean_df(db):
-    result = db.execute(text("SELECT date, sales FROM sales_data"))
+    result = db.execute(
+        text("SELECT date, sales FROM sales_data")
+    )
+
     rows = result.fetchall()
 
-    df = pd.DataFrame(rows, columns=["date", "sales"])
+    df = pd.DataFrame(
+        rows,
+        columns=["date", "sales"]
+    )
+
     df["date"] = pd.to_datetime(df["date"])
     df = df.sort_values("date").reset_index(drop=True)
 
@@ -120,11 +168,16 @@ def generate_features(db: Session = Depends(get_db)):
     try:
         df = get_clean_df(db)
         df = create_features(df)
-        return df.tail(10).to_dict(orient="records")
+
+        return df.tail(10).to_dict(
+            orient="records"
+        )
 
     except Exception as e:
         print(traceback.format_exc())
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
 # ---------------- TRAIN XGBOOST ----------------
@@ -136,17 +189,22 @@ def train_xgboost_model(db: Session = Depends(get_db)):
         df = get_clean_df(db)
 
         if len(df) < 20:
-            return {"error": "Not enough data for XGBoost"}
+            return {
+                "error": "Not enough data for XGBoost"
+            }
 
         xgb_model = train_xgboost(df)
-
         save_xgboost_model(xgb_model)
 
-        return {"message": "XGBoost Model trained and saved"}
+        return {
+            "message": "XGBoost Model trained and saved"
+        }
 
     except Exception as e:
         print(traceback.format_exc())
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
 # ---------------- TRAIN LSTM ----------------
@@ -158,54 +216,85 @@ def train_lstm_model(db: Session = Depends(get_db)):
         df = get_clean_df(db)
 
         if len(df) < 30:
-            return {"error": "Not enough data for LSTM"}
+            return {
+                "error": "Not enough data for LSTM"
+            }
 
         lstm_model, lstm_scaler = train_lstm(df)
 
         save_lstm_model(lstm_model)
         save_scaler(lstm_scaler)
 
-        return {"message": "LSTM model trained and saved"}
+        return {
+            "message": "LSTM model trained and saved"
+        }
 
     except Exception as e:
         print(traceback.format_exc())
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
 # ---------------- HYBRID ----------------
 @app.get("/hybrid-forecast/")
 def hybrid_forecast_api(db: Session = Depends(get_db)):
-
     global xgb_model, lstm_model, lstm_scaler
 
     try:
         if xgb_model is None or lstm_model is None:
-            return {"error": "Train both models first"}
+            return {
+                "error": "Train both models first"
+            }
 
         df = get_clean_df(db)
 
         if len(df) < 20:
-            return {"error": "Not enough data"}
+            return {
+                "error": "Not enough data"
+            }
 
         features_df = create_features(df).dropna()
 
         if len(features_df) == 0:
-            return {"error": "Feature dataframe empty"}
+            return {
+                "error": "Feature dataframe empty"
+            }
 
-        # ALIGN
-        df_aligned = df.loc[features_df.index].reset_index(drop=True)
-        features_df = features_df.reset_index(drop=True)
+        df_aligned = df.loc[
+            features_df.index
+        ].reset_index(drop=True)
 
-        # PREDICTIONS
-        xgb_preds = predict_xgboost(xgb_model, features_df)
-        lstm_preds = predict_lstm(lstm_model, lstm_scaler, df_aligned)
+        features_df = features_df.reset_index(
+            drop=True
+        )
+
+        xgb_preds = predict_xgboost(
+            xgb_model,
+            features_df
+        )
+
+        lstm_preds = predict_lstm(
+            lstm_model,
+            lstm_scaler,
+            df_aligned
+        )
 
         if len(xgb_preds) == 0 or len(lstm_preds) == 0:
-            return {"error": "Prediction failed (empty output)"}
+            return {
+                "error": "Prediction failed"
+            }
 
-        hybrid_preds = hybrid_forecast(xgb_preds, None, lstm_preds)
+        hybrid_preds = hybrid_forecast(
+            xgb_preds,
+            None,
+            lstm_preds
+        )
 
-        result = [round(float(p), 2) for p in hybrid_preds[-5:]]
+        result = [
+            round(float(p), 2)
+            for p in hybrid_preds[-5:]
+        ]
 
         return {
             "hybrid_prediction": result,
@@ -214,36 +303,60 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
 
     except Exception as e:
         print(traceback.format_exc())
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
 # ---------------- EVALUATION ----------------
 @app.get("/evaluate-models/")
 def evaluate_models_api(db: Session = Depends(get_db)):
-
     global xgb_model, lstm_model, lstm_scaler
 
     try:
         if xgb_model is None or lstm_model is None:
-            return {"error": "Train both models first"}
+            return {
+                "error": "Train both models first"
+            }
 
         df = get_clean_df(db)
 
         if len(df) < 40:
-            return {"error": "Not enough data"}
+            return {
+                "error": "Not enough data"
+            }
 
         features_df = create_features(df).dropna()
 
         if len(features_df) == 0:
-            return {"error": "Feature dataframe empty"}
+            return {
+                "error": "Feature dataframe empty"
+            }
 
-        df_aligned = df.loc[features_df.index].reset_index(drop=True)
-        features_df = features_df.reset_index(drop=True)
+        df_aligned = df.loc[
+            features_df.index
+        ].reset_index(drop=True)
 
-        xgb_preds = predict_xgboost(xgb_model, features_df)
-        lstm_preds = predict_lstm(lstm_model, lstm_scaler, df_aligned)
+        features_df = features_df.reset_index(
+            drop=True
+        )
 
-        hybrid_preds = hybrid_forecast(xgb_preds, None, lstm_preds)
+        xgb_preds = predict_xgboost(
+            xgb_model,
+            features_df
+        )
+
+        lstm_preds = predict_lstm(
+            lstm_model,
+            lstm_scaler,
+            df_aligned
+        )
+
+        hybrid_preds = hybrid_forecast(
+            xgb_preds,
+            None,
+            lstm_preds
+        )
 
         actual = df_aligned["sales"].values
 
@@ -258,10 +371,12 @@ def evaluate_models_api(db: Session = Depends(get_db)):
         return results
 
     except Exception as e:
-        return {"error": str(e)}
+        return {
+            "error": str(e)
+        }
 
 
-# ---------------- LOAD MODELS ON STARTUP ----------------
+# ---------------- LOAD MODELS ----------------
 @app.on_event("startup")
 def load_models():
     global xgb_model, lstm_model, lstm_scaler
