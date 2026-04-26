@@ -8,7 +8,7 @@ from sqlalchemy.exc import SQLAlchemyError
 load_dotenv()
 
 # ---------------- DATABASE URL ----------------
-DATABASE_URL = "postgresql://sales_user:oys0d3rLRRrpLM1qt8iqcmqr6LqdEUQl@dpg-d7m7c94vikkc73fq0ksg-a.oregon-postgres.render.com/sales_forecaster_database"
+DATABASE_URL = "postgresql://sales_user:1234@127.0.0.1:5432/sales_forecaster_database"
 
 # Render compatibility fix
 if DATABASE_URL.startswith("postgres://"):

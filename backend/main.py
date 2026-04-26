@@ -1,9 +1,12 @@
 import traceback
 from pathlib import Path
 import pandas as pd
-from fastapi import FastAPI, Depends
+import io
+
+from fastapi import FastAPI, Depends, UploadFile, File
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -28,12 +31,63 @@ from backend.models import (
     load_scaler
 )
 
+# ================= PATH =================
 BASE_DIR = Path(__file__).resolve().parent.parent
 FRONTEND_DIR = BASE_DIR / "frontend"
 
+print("FRONTEND PATH =", FRONTEND_DIR)
+
 app = FastAPI()
 
-# ---------------- CREATE TABLE ----------------
+# ================= STATIC FILES =================
+app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
+
+# ================= GLOBAL MODELS =================
+xgb_model = None
+lstm_model = None
+lstm_scaler = None
+
+
+# ================= HOME =================
+@app.get("/", include_in_schema=False)
+def home():
+    return FileResponse(FRONTEND_DIR / "index.html")
+
+
+@app.get("/styles.css", include_in_schema=False)
+def frontend_styles():
+    return FileResponse(
+        FRONTEND_DIR / "styles.css",
+        media_type="text/css"
+    )
+
+
+@app.get("/app.js", include_in_schema=False)
+def frontend_script():
+    return FileResponse(
+        FRONTEND_DIR / "app.js",
+        media_type="application/javascript"
+    )
+
+
+# ================= API HEALTH =================
+@app.get("/api/health")
+def api_health():
+    return {
+        "message": "API connected successfully"
+    }
+
+
+@app.get("/api/status")
+def api_status():
+    return {
+        "xgboost_loaded": xgb_model is not None,
+        "lstm_loaded": lstm_model is not None,
+        "scaler_loaded": lstm_scaler is not None
+    }
+
+
+# ================= CREATE TABLE =================
 @app.get("/create-table/")
 def create_table(db: Session = Depends(get_db)):
     try:
@@ -61,57 +115,13 @@ def create_table(db: Session = Depends(get_db)):
             "error": str(e)
         }
 
-app.mount("/assets", StaticFiles(directory=FRONTEND_DIR), name="assets")
 
-# ---------------- GLOBAL MODELS ----------------
-xgb_model = None
-lstm_model = None
-lstm_scaler = None
-
-
-# ---------------- HOME ----------------
-@app.get("/", include_in_schema=False)
-def home():
-    return FileResponse(FRONTEND_DIR / "index.html")
-
-
-@app.get("/styles.css", include_in_schema=False)
-def frontend_styles():
-    return FileResponse(
-        FRONTEND_DIR / "styles.css",
-        media_type="text/css"
-    )
-
-
-@app.get("/app.js", include_in_schema=False)
-def frontend_script():
-    return FileResponse(
-        FRONTEND_DIR / "app.js",
-        media_type="application/javascript"
-    )
-
-
-@app.get("/api/health")
-def api_health():
-    return {
-        "message": "API connected to database"
-    }
-
-
-@app.get("/api/status")
-def api_status():
-    return {
-        "xgboost_loaded": xgb_model is not None,
-        "lstm_loaded": lstm_model is not None,
-        "scaler_loaded": lstm_scaler is not None
-    }
-
-
-# ---------------- INSERT ----------------
+# ================= ADD SALES =================
 @app.post("/add-sales/")
 def add_sales(data: SalesData, db: Session = Depends(get_db)):
     try:
         validate_sales_data(data)
+
         anomaly_flag = detect_anomaly(data.sales)
 
         query = text("""
@@ -143,33 +153,147 @@ def add_sales(data: SalesData, db: Session = Depends(get_db)):
         }
 
 
-# ---------------- DATA FETCH ----------------
+# ================= EXCEL UPLOAD =================
+@app.post("/upload-excel/")
+def upload_excel(
+    file: UploadFile = File(...),
+    db: Session = Depends(get_db)
+):
+    try:
+        filename = file.filename.lower()
+
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file.file)
+
+        elif filename.endswith(".xlsx"):
+            contents = file.file.read()
+            df = pd.read_excel(io.BytesIO(contents))
+
+        else:
+            return {
+                "error": "Only CSV and XLSX files are allowed"
+            }
+
+        required_columns = [
+            "date",
+            "sales",
+            "promotion",
+            "stock",
+            "holiday"
+        ]
+
+        for col in required_columns:
+            if col not in df.columns:
+                return {
+                    "error": f"Missing column: {col}"
+                }
+
+        inserted_count = 0
+
+        for _, row in df.iterrows():
+            query = text("""
+                INSERT INTO sales_data
+                (date, sales, promotion, stock, holiday)
+                VALUES
+                (:date, :sales, :promotion, :stock, :holiday)
+            """)
+
+            db.execute(query, {
+                "date": pd.to_datetime(row["date"]).date(),
+                "sales": float(row["sales"]),
+                "promotion": bool(row["promotion"]),
+                "stock": int(row["stock"]),
+                "holiday": bool(row["holiday"])
+            })
+
+            inserted_count += 1
+
+        db.commit()
+
+        return {
+            "message": f"{inserted_count} rows uploaded successfully"
+        }
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return {
+            "error": str(e)
+        }
+
+
+# ================= FETCH DATA =================
 def get_clean_df(db):
-    result = db.execute(
-        text("SELECT date, sales FROM sales_data")
-    )
+    try:
+        result = db.execute(
+            text("""
+                SELECT
+                    date,
+                    sales,
+                    promotion,
+                    stock,
+                    holiday
+                FROM sales_data
+                ORDER BY date
+            """)
+        )
 
-    rows = result.fetchall()
+        rows = result.fetchall()
 
-    df = pd.DataFrame(
-        rows,
-        columns=["date", "sales"]
-    )
+        df = pd.DataFrame(
+            rows,
+            columns=[
+                "date",
+                "sales",
+                "promotion",
+                "stock",
+                "holiday"
+            ]
+        )
 
-    df["date"] = pd.to_datetime(df["date"])
-    df = df.sort_values("date").reset_index(drop=True)
+        if df.empty:
+            return pd.DataFrame(columns=[
+                "date",
+                "sales",
+                "promotion",
+                "stock",
+                "holiday"
+            ])
 
-    return df
+        df["date"] = pd.to_datetime(df["date"])
+        df["sales"] = df["sales"].astype(float)
+        df["promotion"] = df["promotion"].astype(bool)
+        df["stock"] = df["stock"].astype(int)
+        df["holiday"] = df["holiday"].astype(bool)
 
+        df = df.sort_values("date").reset_index(drop=True)
 
-# ---------------- FEATURE ----------------
+        return df
+
+    except Exception:
+        print(traceback.format_exc())
+
+        return pd.DataFrame(columns=[
+            "date",
+            "sales",
+            "promotion",
+            "stock",
+            "holiday"
+        ])
+
+# ================= GENERATE FEATURES =================
 @app.get("/generate-features/")
-def generate_features(db: Session = Depends(get_db)):
+def generate_features_api(db: Session = Depends(get_db)):
     try:
         df = get_clean_df(db)
-        df = create_features(df)
 
-        return df.tail(10).to_dict(
+        if df.empty:
+            return {
+                "error": "No sales data found"
+            }
+
+        feature_df = create_features(df)
+
+        return feature_df.tail(10).to_dict(
             orient="records"
         )
 
@@ -180,7 +304,7 @@ def generate_features(db: Session = Depends(get_db)):
         }
 
 
-# ---------------- TRAIN XGBOOST ----------------
+# ================= TRAIN XGBOOST =================
 @app.get("/train-xgboost/")
 def train_xgboost_model(db: Session = Depends(get_db)):
     global xgb_model
@@ -190,14 +314,14 @@ def train_xgboost_model(db: Session = Depends(get_db)):
 
         if len(df) < 20:
             return {
-                "error": "Not enough data for XGBoost"
+                "error": "Minimum 20 rows required for XGBoost"
             }
 
         xgb_model = train_xgboost(df)
         save_xgboost_model(xgb_model)
 
         return {
-            "message": "XGBoost Model trained and saved"
+            "message": "XGBoost model trained successfully"
         }
 
     except Exception as e:
@@ -207,7 +331,7 @@ def train_xgboost_model(db: Session = Depends(get_db)):
         }
 
 
-# ---------------- TRAIN LSTM ----------------
+# ================= TRAIN LSTM =================
 @app.get("/train-lstm/")
 def train_lstm_model(db: Session = Depends(get_db)):
     global lstm_model, lstm_scaler
@@ -217,7 +341,7 @@ def train_lstm_model(db: Session = Depends(get_db)):
 
         if len(df) < 30:
             return {
-                "error": "Not enough data for LSTM"
+                "error": "Minimum 30 rows required for LSTM"
             }
 
         lstm_model, lstm_scaler = train_lstm(df)
@@ -226,7 +350,7 @@ def train_lstm_model(db: Session = Depends(get_db)):
         save_scaler(lstm_scaler)
 
         return {
-            "message": "LSTM model trained and saved"
+            "message": "LSTM model trained successfully"
         }
 
     except Exception as e:
@@ -236,7 +360,7 @@ def train_lstm_model(db: Session = Depends(get_db)):
         }
 
 
-# ---------------- HYBRID ----------------
+# ================= HYBRID FORECAST =================
 @app.get("/hybrid-forecast/")
 def hybrid_forecast_api(db: Session = Depends(get_db)):
     global xgb_model, lstm_model, lstm_scaler
@@ -261,14 +385,6 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
                 "error": "Feature dataframe empty"
             }
 
-        df_aligned = df.loc[
-            features_df.index
-        ].reset_index(drop=True)
-
-        features_df = features_df.reset_index(
-            drop=True
-        )
-
         xgb_preds = predict_xgboost(
             xgb_model,
             features_df
@@ -277,13 +393,8 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
         lstm_preds = predict_lstm(
             lstm_model,
             lstm_scaler,
-            df_aligned
+            df
         )
-
-        if len(xgb_preds) == 0 or len(lstm_preds) == 0:
-            return {
-                "error": "Prediction failed"
-            }
 
         hybrid_preds = hybrid_forecast(
             xgb_preds,
@@ -292,8 +403,8 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
         )
 
         result = [
-            round(float(p), 2)
-            for p in hybrid_preds[-5:]
+            round(float(x), 2)
+            for x in hybrid_preds[-5:]
         ]
 
         return {
@@ -308,7 +419,7 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
         }
 
 
-# ---------------- EVALUATION ----------------
+# ================= EVALUATE MODELS =================
 @app.get("/evaluate-models/")
 def evaluate_models_api(db: Session = Depends(get_db)):
     global xgb_model, lstm_model, lstm_scaler
@@ -323,7 +434,7 @@ def evaluate_models_api(db: Session = Depends(get_db)):
 
         if len(df) < 40:
             return {
-                "error": "Not enough data"
+                "error": "Minimum 40 rows required"
             }
 
         features_df = create_features(df).dropna()
@@ -333,14 +444,6 @@ def evaluate_models_api(db: Session = Depends(get_db)):
                 "error": "Feature dataframe empty"
             }
 
-        df_aligned = df.loc[
-            features_df.index
-        ].reset_index(drop=True)
-
-        features_df = features_df.reset_index(
-            drop=True
-        )
-
         xgb_preds = predict_xgboost(
             xgb_model,
             features_df
@@ -349,7 +452,7 @@ def evaluate_models_api(db: Session = Depends(get_db)):
         lstm_preds = predict_lstm(
             lstm_model,
             lstm_scaler,
-            df_aligned
+            df
         )
 
         hybrid_preds = hybrid_forecast(
@@ -358,7 +461,7 @@ def evaluate_models_api(db: Session = Depends(get_db)):
             lstm_preds
         )
 
-        actual = df_aligned["sales"].values
+        actual = df["sales"].values
 
         results = evaluate_models(
             actual,
@@ -371,12 +474,11 @@ def evaluate_models_api(db: Session = Depends(get_db)):
         return results
 
     except Exception as e:
+        print(traceback.format_exc())
         return {
             "error": str(e)
         }
-
-
-# ---------------- LOAD MODELS ----------------
+# ================= LOAD MODELS =================
 @app.on_event("startup")
 def load_models():
     global xgb_model, lstm_model, lstm_scaler
@@ -386,7 +488,7 @@ def load_models():
         lstm_model = load_lstm_model()
         lstm_scaler = load_scaler()
 
-        print("Models loaded successfully")
+        print("Saved models loaded successfully")
 
     except:
         print("No saved models found")
