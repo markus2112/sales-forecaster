@@ -4,342 +4,241 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Adversarial Sales Forecaster</title>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="styles.css">
-    <script src="app.js" defer></script>
 </head>
 <body>
-
-    <div class="app-shell">
-
-        <!-- ================= SIDEBAR ================= -->
-        <aside class="sidebar reveal">
-
-            <div class="brand">
-                <div class="brand-mark"></div>
-                <div class="brand-copy">
-                    <strong>Adversarial</strong>
-                    <span>Sales Forecaster</span>
-                </div>
+    <div class="dashboard">
+        <!-- Sidebar -->
+        <aside class="sidebar glass-panel">
+            <div class="logo">
+                <i class='bx bx-trending-up'></i>
+                <span>Forecaster<span class="highlight">AI</span></span>
             </div>
-
-            <nav class="sidebar-nav">
-
-                <button type="button" class="nav-link active" data-scroll-target="heroBanner">
-                    <span>Home</span>
-                </button>
-
-                <button type="button" class="nav-link" data-scroll-target="kpiSection">
-                    <span>Dashboard</span>
-                </button>
-
-                <button type="button" class="nav-link" data-scroll-target="forecastPanel">
-                    <span>Forecast Explorer</span>
-                </button>
-
-                <button type="button" class="nav-link" data-scroll-target="scenarioPanel">
-                    <span>Scenario Simulator</span>
-                </button>
-
-                <button type="button" class="nav-link" data-scroll-target="salesFormSection">
-                    <span>Add Sales</span>
-                </button>
-
+            <nav class="nav-menu">
+                <a href="#dashboard" class="nav-item active"><i class='bx bx-grid-alt'></i> Dashboard</a>
+                <a href="#analytics" class="nav-item"><i class='bx bx-line-chart'></i> Analytics</a>
+                <a href="#upload" class="nav-item"><i class='bx bx-cloud-upload'></i> Upload Center</a>
+                <a href="#training" class="nav-item"><i class='bx bx-brain'></i> Model Training</a>
             </nav>
-
+            <div class="sidebar-footer">
+                <a href="#" class="nav-item"><i class='bx bx-cog'></i> Settings</a>
+            </div>
         </aside>
 
-        <!-- ================= MAIN ================= -->
-        <main class="main-shell">
-
-            <!-- ================= TOP HEADER ================= -->
-            <header class="topbar reveal">
-
-                <div class="title-block">
-                    <h1 id="greetingTitle">
-                        Good Morning,👋
-                    </h1>
-
-                    <p>
-                        Sales forecasting dashboard with live model predictions
-                    </p>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Executive Header -->
+            <header id="dashboard" class="header glass-panel">
+                <div class="greeting">
+                    <h1>Good Morning, <span class="highlight">Executive</span></h1>
+                    <p>Here is the latest adversarial sales intelligence.</p>
                 </div>
-
-            </header>
-
-            <!-- ================= HERO ================= -->
-            <section class="hero-banner reveal" id="heroBanner">
-
-                <div class="hero-copy">
-
-                    <h2>
-                        Forecast with Confidence
-                    </h2>
-
-                    <p class="hero-text">
-                        Adversarial AI-powered forecasting system with dynamic dashboard insights
-                    </p>
-
-                    <div class="hero-status-row">
-
-                        <span class="status-pill" id="apiStatusPill">
-                            Checking API...
-                        </span>
-
-                        <span class="status-pill muted" id="lastActionPill">
-                            No actions yet
-                        </span>
-
-                    </div>
-
-                </div>
-
-            </section>
-
-            <!-- ================= KPI ================= -->
-            <section class="kpi-row reveal" id="kpiSection">
-
-                <article class="metric-card">
-                    <div class="metric-copy">
-                        <span>Total Forecast Value</span>
-                        <strong id="totalForecastValue">$24.8M</strong>
-                    </div>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-copy">
-                        <span>Forecast Accuracy</span>
-                        <strong id="accuracyValue">8.74%</strong>
-                    </div>
-                </article>
-
-                <article class="metric-card">
-                    <div class="metric-copy">
-                        <span>Robustness Score</span>
-                        <strong id="robustnessValue">87 / 100</strong>
-                    </div>
-                </article>
-
-            </section>
-
-            <!-- ================= CHART ================= -->
-            <section class="analytics-grid">
-
-                <article class="panel-card chart-panel reveal" id="forecastPanel">
-
-                    <div class="panel-header">
-                        <div>
-                            <h3>Forecast vs Actual</h3>
-                            <p id="chartSourceNote">
-                                Live chart updates from backend
-                            </p>
+                <div class="status-indicators">
+                    <div class="status-item">
+                        <i class='bx bx-server'></i>
+                        <div class="status-info">
+                            <span class="label">API Status</span>
+                            <span class="value online" id="apiStatusPill">Connecting... <span class="dot"></span></span>
                         </div>
                     </div>
-
-                    <div class="chart-stage">
-                        <svg
-                            id="trendChart"
-                            viewBox="0 0 760 320"
-                            preserveAspectRatio="none">
-                        </svg>
+                    <div class="status-item">
+                        <i class='bx bx-cube-alt'></i>
+                        <div class="status-info">
+                            <span class="label">Model Status</span>
+                            <span class="value trained">Trained <span class="dot trained-dot"></span></span>
+                        </div>
                     </div>
-
-                </article>
-
-            </section>
-
-            <!-- ================= SALES FORM + EXCEL UPLOAD ================= -->
-            <section class="panel-card reveal" id="salesFormSection">
-
-                <div class="panel-header">
-                    <div>
-                        <h3>Add Sales Data</h3>
-                        <p>
-                            Insert daily sales records into database
-                        </p>
+                    <div class="status-item">
+                        <i class='bx bx-history'></i>
+                        <div class="status-info">
+                            <span class="label">Last Action</span>
+                            <span class="value" id="lastActionPill">System Init</span>
+                        </div>
                     </div>
                 </div>
+            </header>
 
-                <!-- FORM -->
-                <form
-                    id="salesForm"
-                    style="
-                        display: grid;
-                        gap: 14px;
-                        margin-top: 20px;
-                    "
-                >
-
-                    <input
-                        type="date"
-                        id="date"
-                        required
-                        style="
-                            padding: 12px;
-                            border: 1px solid #ddd;
-                            border-radius: 10px;
-                        "
-                    >
-
-                    <input
-                        type="number"
-                        id="sales"
-                        placeholder="Sales Amount"
-                        required
-                        style="
-                            padding: 12px;
-                            border: 1px solid #ddd;
-                            border-radius: 10px;
-                        "
-                    >
-
-                    <input
-                        type="number"
-                        id="stock"
-                        placeholder="Stock Available"
-                        required
-                        style="
-                            padding: 12px;
-                            border: 1px solid #ddd;
-                            border-radius: 10px;
-                        "
-                    >
-
-                    <label>
-                        <input type="checkbox" id="promotion">
-                        Promotion Active
-                    </label>
-
-                    <label>
-                        <input type="checkbox" id="holiday">
-                        Holiday
-                    </label>
-
-                    <button
-                        type="submit"
-                        class="feature-button"
-                    >
-                        Submit Sales Data
-                    </button>
-
-                </form>
-
-                <!-- ================= EXCEL UPLOAD ================= -->
-
-                <div
-                    class="upload-section"
-                    style="
-                        margin-top: 40px;
-                        padding-top: 20px;
-                        border-top: 1px solid #ddd;
-                    "
-                >
-
-                    <h3>Upload Excel / CSV</h3>
-
-                    <p>
-                        Upload bulk sales data using .xlsx or .csv file
-                    </p>
-
-                    <input
-                        type="file"
-                        id="excelFile"
-                        accept=".csv,.xlsx"
-                        style="
-                            margin-top: 15px;
-                            margin-bottom: 15px;
-                        "
-                    >
-
-                    <br>
-
-                    <button
-                        type="button"
-                        id="uploadExcelBtn"
-                        class="feature-button"
-                    >
-                        Upload File
-                    </button>
-
-                    <p
-                        id="uploadStatus"
-                        style="
-                            margin-top: 15px;
-                            font-weight: 600;
-                        "
-                    ></p>
-
+            <!-- KPI Cards -->
+            <section class="kpi-grid">
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon"><i class='bx bx-dollar-circle'></i></div>
+                    <div class="kpi-details">
+                        <h3>Total Forecast Value</h3>
+                        <div class="kpi-value" id="totalForecastValue">$0.00</div>
+                    </div>
                 </div>
-
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon"><i class='bx bx-target-lock'></i></div>
+                    <div class="kpi-details">
+                        <h3>Forecast Accuracy (MAPE)</h3>
+                        <div class="kpi-value" id="accuracyValue">--%</div>
+                    </div>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon"><i class='bx bx-shield-quarter'></i></div>
+                    <div class="kpi-details">
+                        <h3>Robustness Score</h3>
+                        <div class="kpi-value">91.2%</div>
+                    </div>
+                </div>
+                <div class="kpi-card glass-panel warning-kpi">
+                    <div class="kpi-icon"><i class='bx bx-error-circle'></i></div>
+                    <div class="kpi-details">
+                        <h3>Anomaly Score</h3>
+                        <div class="kpi-value">0.04 <span class="trend down"><i class='bx bx-down-arrow-alt'></i> Safe</span></div>
+                    </div>
+                </div>
+                <div class="kpi-card glass-panel">
+                    <div class="kpi-icon"><i class='bx bx-check-shield'></i></div>
+                    <div class="kpi-details">
+                        <h3>Model Confidence</h3>
+                        <div class="kpi-value">High</div>
+                    </div>
+                </div>
             </section>
 
-            <!-- ================= ACTION BUTTONS ================= -->
-            <section class="quick-actions reveal" id="quickActions">
+            <!-- Forecast Analytics Section -->
+            <section id="analytics" class="analytics-section">
+                <div class="chart-container glass-panel">
+                    <div class="section-header">
+                        <h2>Forecast vs Actual</h2>
+                        <div class="chart-actions">
+                            <button class="btn-icon" data-action="forecast"><i class='bx bx-refresh'></i></button>
+                        </div>
+                    </div>
+                    <div style="height: 300px; width: 100%;">
+                        <canvas id="forecastVsActualChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="analytics-row">
+                    <div class="chart-container half-width glass-panel">
+                        <div class="section-header">
+                            <h2>Historical Sales</h2>
+                        </div>
+                        <div style="height: 250px; width: 100%;">
+                            <canvas id="historicalChart"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="glass-panel half-width feature-panel">
+                        <div class="section-header">
+                            <h2>Future Forecast Panel</h2>
+                        </div>
+                        <div class="forecast-list" id="futureForecastList">
+                            <div class="forecast-item">
+                                <div class="date">Awaiting Forecast...</div>
+                                <div class="proj-value">--</div>
+                            </div>
+                        </div>
+                        <button class="btn-primary w-full mt-1" data-action="forecast">Generate Detailed Report</button>
+                    </div>
+                </div>
+            </section>
 
-                <article class="feature-card">
-                    <h4>Generate Features</h4>
-                    <button
-                        type="button"
-                        class="feature-button"
-                        data-action="features"
-                        data-endpoint="/generate-features/"
-                    >
-                        Run
-                    </button>
-                </article>
+            <!-- Smart Upload Center -->
+            <section id="upload" class="upload-section">
+                <div class="section-title">
+                    <h2>Smart Upload Center</h2>
+                    <p>Ingest new sales data to retrain and evaluate models.</p>
+                </div>
+                <div class="upload-grid">
+                    <div class="upload-card glass-panel">
+                        <h3>Add Sales Form</h3>
+                        <form id="salesForm" class="upload-form">
+                            <div class="form-group">
+                                <label for="date">Date</label>
+                                <input type="date" id="date" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="sales">Sales</label>
+                                <input type="number" id="sales" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="stock">Stock</label>
+                                <input type="number" id="stock" required>
+                            </div>
+                            <div class="form-group-checkbox">
+                                <input type="checkbox" id="promotion">
+                                <label for="promotion">Promotion</label>
+                            </div>
+                            <div class="form-group-checkbox">
+                                <input type="checkbox" id="holiday">
+                                <label for="holiday">Holiday</label>
+                            </div>
+                            <button type="submit" class="btn-secondary mt-1">Submit Data</button>
+                        </form>
+                    </div>
+                    <div class="upload-card glass-panel drop-zone" id="excel-drop">
+                        <i class='bx bx-file'></i>
+                        <h3>Excel Upload</h3>
+                        <p>Upload .xlsx file</p>
+                        <input type="file" id="excelFile" accept=".xlsx" style="display: none;">
+                        <button class="btn-secondary" onclick="document.getElementById('excelFile').click()">Browse Files</button>
+                        <button class="btn-primary mt-1 w-full" id="uploadExcelBtn">Upload</button>
+                        <div id="uploadStatus" class="mt-1" style="font-size: 0.8rem; color: var(--text-muted);"></div>
+                    </div>
+                    <div class="upload-card glass-panel drop-zone" id="csv-drop">
+                        <i class='bx bx-file-blank'></i>
+                        <h3>CSV Upload</h3>
+                        <p>Upload .csv file</p>
+                        <button class="btn-secondary">Coming Soon</button>
+                    </div>
+                </div>
+            </section>
 
-                <article class="feature-card">
-                    <h4>Train XGBoost</h4>
-                    <button
-                        type="button"
-                        class="feature-button"
-                        data-action="xgboost"
-                        data-endpoint="/train-xgboost/"
-                    >
-                        Train
-                    </button>
-                </article>
-
-                <article class="feature-card">
-                    <h4>Train LSTM</h4>
-                    <button
-                        type="button"
-                        class="feature-button"
-                        data-action="lstm"
-                        data-endpoint="/train-lstm/"
-                    >
-                        Train
-                    </button>
-                </article>
-
-                <article class="feature-card">
-                    <h4>Hybrid Forecast</h4>
-                    <button
-                        type="button"
-                        class="feature-button"
-                        data-action="forecast"
-                        data-endpoint="/hybrid-forecast/"
-                    >
-                        Predict
-                    </button>
-                </article>
-
-                <article class="feature-card">
-                    <h4>Evaluate Models</h4>
-                    <button
-                        type="button"
-                        class="feature-button"
-                        data-action="evaluate"
-                        data-endpoint="/evaluate-models/"
-                    >
-                        Evaluate
-                    </button>
-                </article>
-
+            <!-- Model Training Section -->
+            <section id="training" class="training-section">
+                <div class="section-title">
+                    <h2>Model Training & Evaluation</h2>
+                    <p>Orchestrate the adversarial AI pipeline.</p>
+                </div>
+                <div class="training-grid">
+                    <div class="training-card glass-panel">
+                        <div class="icon-wrap"><i class='bx bx-cog'></i></div>
+                        <h3>1. Generate Features</h3>
+                        <p>Run feature engineering pipeline.</p>
+                        <button class="btn-primary" data-action="features">Run Pipeline</button>
+                    </div>
+                    <div class="training-card glass-panel">
+                        <div class="icon-wrap"><i class='bx bx-network-chart'></i></div>
+                        <h3>2. Train XGBoost</h3>
+                        <p>Train gradient boosting decision trees.</p>
+                        <button class="btn-primary" data-action="xgboost">Train Model</button>
+                    </div>
+                    <div class="training-card glass-panel">
+                        <div class="icon-wrap"><i class='bx bx-brain'></i></div>
+                        <h3>3. Train LSTM</h3>
+                        <p>Train deep learning time-series model.</p>
+                        <button class="btn-primary" data-action="lstm">Train Model</button>
+                    </div>
+                    <div class="training-card glass-panel">
+                        <div class="icon-wrap"><i class='bx bx-git-merge'></i></div>
+                        <h3>4. Hybrid Forecast</h3>
+                        <p>Ensemble XGBoost + LSTM predictions.</p>
+                        <button class="btn-primary" data-action="forecast">Ensemble</button>
+                    </div>
+                    <div class="training-card glass-panel highlight-card">
+                        <div class="icon-wrap"><i class='bx bx-bar-chart-alt-2'></i></div>
+                        <h3>5. Evaluate Models</h3>
+                        <p>Compare performance & anomaly scores.</p>
+                        <button class="btn-primary" data-action="evaluate">Evaluate</button>
+                    </div>
+                </div>
             </section>
 
         </main>
-
     </div>
 
+    <!-- Notification Toast -->
+    <div id="toast" class="toast">
+        <i class='bx bx-info-circle'></i>
+        <span id="toastMessage">Notification</span>
+    </div>
+
+    <script src="app.js"></script>
 </body>
 </html>

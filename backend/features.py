@@ -4,7 +4,7 @@ import numpy as np
 
 def create_features(df):
 
-    df = df.copy()
+    df = df.copy() 
 
     # ---------------- SORT & DATE ----------------
     df = df.sort_values("date").reset_index(drop=True)
