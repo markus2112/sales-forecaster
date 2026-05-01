@@ -64,13 +64,6 @@
             <!-- KPI Cards -->
             <section class="kpi-grid">
                 <div class="kpi-card glass-panel">
-                    <div class="kpi-icon"><i class='bx bx-dollar-circle'></i></div>
-                    <div class="kpi-details">
-                        <h3>Total Forecast Value</h3>
-                        <div class="kpi-value" id="totalForecastValue">$0.00</div>
-                    </div>
-                </div>
-                <div class="kpi-card glass-panel">
                     <div class="kpi-icon"><i class='bx bx-target-lock'></i></div>
                     <div class="kpi-details">
                         <h3>Forecast Accuracy (MAPE)</h3>
@@ -181,11 +174,17 @@
                         <button class="btn-primary mt-1 w-full" id="uploadExcelBtn">Upload</button>
                         <div id="uploadStatus" class="mt-1" style="font-size: 0.8rem; color: var(--text-muted);"></div>
                     </div>
-                    <div class="upload-card glass-panel drop-zone" id="csv-drop">
-                        <i class='bx bx-file-blank'></i>
-                        <h3>CSV Upload</h3>
-                        <p>Upload .csv file</p>
-                        <button class="btn-secondary">Coming Soon</button>
+                    <div class="upload-card glass-panel drop-zone" id="validation-drop">
+                        <i class='bx bx-check-shield'></i>
+                        <h3>Data Validation</h3>
+                        <p>Detect Nulls & Errors (.csv, .xlsx)</p>
+                        <input type="file" id="validationFile" accept=".csv, .xlsx" style="display: none;">
+                        <button class="btn-secondary" onclick="document.getElementById('validationFile').click()">Browse Files</button>
+                        <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+                            <button class="btn-primary w-full" id="detectNullsBtn">Check Nulls</button>
+                            <button class="btn-primary w-full" id="detectErrorsBtn">Check Errors</button>
+                        </div>
+                        <div id="validationStatus" class="mt-1" style="font-size: 0.8rem; color: var(--text-muted); text-align: left; max-height: 120px; overflow-y: auto;"></div>
                     </div>
                 </div>
             </section>

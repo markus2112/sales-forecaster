@@ -1,12 +1,12 @@
 :root {
-    --bg-color: #0b0914;
+    --bg-color: #050505;
     --glass-bg: rgba(255, 255, 255, 0.03);
     --glass-border: rgba(255, 255, 255, 0.08);
     --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-    --primary: #8b5cf6;
-    --primary-hover: #7c3aed;
-    --secondary: #c4b5fd;
-    --accent: #d8b4fe;
+    --primary: #10b981;
+    --primary-hover: #059669;
+    --secondary: #a7f3d0;
+    --accent: #ffffff;
     --text-main: #f8fafc;
     --text-muted: #94a3b8;
     --success: #10b981;
@@ -28,8 +28,8 @@ html {
 body {
     background-color: var(--bg-color);
     background-image: 
-        radial-gradient(circle at 15% 50%, rgba(139, 92, 246, 0.15), transparent 25%),
-        radial-gradient(circle at 85% 30%, rgba(196, 181, 253, 0.1), transparent 25%);
+        radial-gradient(circle at 15% 50%, rgba(16, 185, 129, 0.15), transparent 25%),
+        radial-gradient(circle at 85% 30%, rgba(255, 255, 255, 0.1), transparent 25%);
     color: var(--text-main);
     min-height: 100vh;
     overflow-x: hidden;
@@ -102,7 +102,7 @@ body {
 }
 
 .nav-item:hover, .nav-item.active {
-    background: rgba(139, 92, 246, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     color: var(--text-main);
 }
 
@@ -163,7 +163,7 @@ body {
 .status-item i {
     font-size: 1.5rem;
     color: var(--secondary);
-    background: rgba(196, 181, 253, 0.1);
+    background: rgba(255, 255, 255, 0.1);
     padding: 0.5rem;
     border-radius: 8px;
 }
@@ -232,13 +232,13 @@ body {
     width: 48px;
     height: 48px;
     border-radius: 12px;
-    background: linear-gradient(135deg, rgba(139, 92, 246, 0.2), rgba(139, 92, 246, 0.05));
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(16, 185, 129, 0.05));
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 1.5rem;
     color: var(--primary);
-    border: 1px solid rgba(139, 92, 246, 0.2);
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .kpi-details h3 {
@@ -450,7 +450,7 @@ body {
 }
 
 .drop-zone {
-    border: 2px dashed rgba(139, 92, 246, 0.4);
+    border: 2px dashed rgba(16, 185, 129, 0.4);
     cursor: pointer;
     transition: border-color 0.3s, background 0.3s;
     align-items: center;
@@ -458,7 +458,7 @@ body {
 
 .drop-zone:hover {
     border-color: var(--primary);
-    background: rgba(139, 92, 246, 0.05);
+    background: rgba(16, 185, 129, 0.05);
 }
 
 /* Training Section */
@@ -496,7 +496,7 @@ body {
     width: 60px;
     height: 60px;
     border-radius: 50%;
-    background: rgba(139, 92, 246, 0.1);
+    background: rgba(16, 185, 129, 0.1);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -530,13 +530,13 @@ body {
 .btn-primary {
     background: var(--primary);
     color: white;
-    box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
 }
 
 .btn-primary:hover {
     background: var(--primary-hover);
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
+    box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
 }
 
 .btn-secondary {
@@ -568,7 +568,7 @@ body {
     border: 1px solid var(--primary);
     padding: 1rem 1.5rem;
     border-radius: 12px;
-    box-shadow: 0 8px 32px rgba(139, 92, 246, 0.2);
+    box-shadow: 0 8px 32px rgba(16, 185, 129, 0.2);
     display: flex;
     align-items: center;
     gap: 0.75rem;

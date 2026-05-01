@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     backgroundColor: 'rgba(11, 9, 20, 0.9)',
                     titleColor: '#fff',
                     bodyColor: '#c4b5fd',
-                    borderColor: 'rgba(139, 92, 246, 0.2)',
+                    borderColor: 'rgba(16, 185, 129, 0.2)',
                     borderWidth: 1,
                     padding: 10,
                     cornerRadius: 8
@@ -57,12 +57,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: 'Forecasted (Hybrid)',
                         data: [],
-                        borderColor: '#8b5cf6',
+                        borderColor: '#10b981',
                         borderWidth: 2,
                         tension: 0.4,
-                        pointBackgroundColor: '#8b5cf6',
+                        pointBackgroundColor: '#10b981',
                         fill: true,
-                        backgroundColor: 'rgba(139, 92, 246, 0.1)',
+                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
                     }
                 ]
             },
@@ -219,6 +219,115 @@ document.addEventListener("DOMContentLoaded", function () {
                 console.log(error);
                 status.innerText = "Upload failed";
                 showMessage("Excel upload failed");
+            }
+        });
+    }
+
+    // ================= DATA VALIDATION =================
+    const detectNullsBtn = document.getElementById("detectNullsBtn");
+    const detectErrorsBtn = document.getElementById("detectErrorsBtn");
+    const validationFile = document.getElementById("validationFile");
+    const validationStatus = document.getElementById("validationStatus");
+
+    if (validationFile) {
+        validationFile.addEventListener("change", function() {
+            if (this.files.length) {
+                validationStatus.innerHTML = `<span style="color:var(--accent)">Selected: ${this.files[0].name}</span>`;
+            }
+        });
+    }
+
+    if (detectNullsBtn) {
+        detectNullsBtn.addEventListener("click", async function() {
+            if (!validationFile || !validationFile.files.length) {
+                validationStatus.innerHTML = "<span style='color:var(--danger)'>Please browse and select a file first</span>";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", validationFile.files[0]);
+
+            validationStatus.innerHTML = "Checking for nulls...";
+            showMessage("Detecting Null Values...");
+
+            try {
+                const response = await fetch("/detect-nulls/", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.error) {
+                    validationStatus.innerHTML = `<span style='color:var(--danger)'>Error: ${result.error}</span>`;
+                    showMessage("Error: " + result.error);
+                    return;
+                }
+
+                let breakdownHtml = Object.entries(result.null_breakdown)
+                    .map(([col, count]) => `${col}: ${count}`)
+                    .join("<br>");
+
+                validationStatus.innerHTML = `
+                    <div style="color:var(--success); margin-bottom: 5px;">Total Nulls: ${result.total_nulls} in ${result.total_rows} rows</div>
+                    ${result.total_nulls > 0 ? `<div style="font-size: 0.75rem; margin-top: 4px;">Breakdown:<br>${breakdownHtml}</div>` : '<div>Data looks clean! No nulls found.</div>'}
+                `;
+                showMessage("Null detection complete");
+
+            } catch (error) {
+                console.log(error);
+                validationStatus.innerHTML = "<span style='color:var(--danger)'>Detection failed</span>";
+                showMessage("Null detection failed");
+            }
+        });
+    }
+
+    if (detectErrorsBtn) {
+        detectErrorsBtn.addEventListener("click", async function() {
+            if (!validationFile || !validationFile.files.length) {
+                validationStatus.innerHTML = "<span style='color:var(--danger)'>Please browse and select a file first</span>";
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append("file", validationFile.files[0]);
+
+            validationStatus.innerHTML = "Checking for errors...";
+            showMessage("Detecting Errors...");
+
+            try {
+                const response = await fetch("/detect-errors/", {
+                    method: "POST",
+                    body: formData
+                });
+                const result = await response.json();
+
+                if (result.error && !result.errors) {
+                    validationStatus.innerHTML = `<span style='color:var(--danger)'>Error: ${result.error}</span>`;
+                    showMessage("Error: " + result.error);
+                    return;
+                }
+
+                if (result.error_count > 0) {
+                    let errorsHtml = result.errors
+                        .map(err => `• <b>${err.type}</b>: ${err.detail}`)
+                        .join("<br>");
+                        
+                    validationStatus.innerHTML = `
+                        <div style="color:var(--danger); margin-bottom: 5px;">Found ${result.error_count} error(s) in ${result.total_rows} rows</div>
+                        <div style="font-size: 0.75rem; margin-top: 4px;">${errorsHtml}</div>
+                    `;
+                    showMessage("Errors found in data");
+                } else {
+                    validationStatus.innerHTML = `
+                        <div style="color:var(--success);">Data looks valid! No schema or logic errors found.</div>
+                    `;
+                    showMessage("Error detection complete");
+                }
+
+            } catch (error) {
+                console.log(error);
+                validationStatus.innerHTML = "<span style='color:var(--danger)'>Detection failed</span>";
+                showMessage("Error detection failed");
             }
         });
     }

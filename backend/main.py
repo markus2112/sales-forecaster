@@ -3,7 +3,7 @@ from pathlib import Path
 import pandas as pd
 import io
 
-from fastapi import FastAPI, Depends, UploadFile, File
+from fastapi import FastAPI, Depends, UploadFile, File, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -68,6 +68,11 @@ def frontend_script():
         FRONTEND_DIR / "app.js",
         media_type="application/javascript"
     )
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    return Response(content=b"", media_type="image/x-icon")
+
 
 
 # ================= API HEALTH =================
@@ -152,6 +157,113 @@ def add_sales(data: SalesData, db: Session = Depends(get_db)):
             "error": str(e)
         }
 
+
+# ================= NULL VALUE DETECTION =================
+@app.post("/detect-nulls/")
+def detect_nulls(file: UploadFile = File(...)):
+    try:
+        filename = file.filename.lower()
+
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file.file)
+
+        elif filename.endswith(".xlsx"):
+            contents = file.file.read()
+            df = pd.read_excel(io.BytesIO(contents))
+
+        else:
+            return {
+                "error": "Only CSV and XLSX files are allowed"
+            }
+
+        null_counts = df.isnull().sum().to_dict()
+        total_rows = len(df)
+        total_nulls = int(sum(null_counts.values()))
+        clean_null_counts = {k: int(v) for k, v in null_counts.items()}
+
+        return {
+            "total_rows": total_rows,
+            "total_nulls": total_nulls,
+            "null_breakdown": clean_null_counts,
+            "message": "Null value detection complete"
+        }
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return {
+            "error": str(e)
+        }
+
+
+# ================= ERROR DETECTION =================
+@app.post("/detect-errors/")
+def detect_errors(file: UploadFile = File(...)):
+    try:
+        filename = file.filename.lower()
+
+        if filename.endswith(".csv"):
+            df = pd.read_csv(file.file)
+        elif filename.endswith(".xlsx"):
+            contents = file.file.read()
+            df = pd.read_excel(io.BytesIO(contents))
+        else:
+            return {"error": "Only CSV and XLSX files are allowed"}
+
+        errors = []
+        
+        # 1. Check Required Columns
+        required_columns = ["date", "sales", "promotion", "stock", "holiday"]
+        missing_cols = [col for col in required_columns if col not in df.columns]
+        if missing_cols:
+            errors.append({"type": "Missing Columns", "detail": f"Missing: {', '.join(missing_cols)}"})
+            return {
+                "total_rows": len(df),
+                "error_count": len(errors),
+                "errors": errors,
+                "message": "Critical schema errors found"
+            }
+
+        # 2. Check Duplicates
+        duplicate_count = df.duplicated().sum()
+        if duplicate_count > 0:
+            errors.append({"type": "Duplicate Rows", "detail": f"Found {int(duplicate_count)} duplicate row(s)"})
+
+        # 3. Check Negative Sales
+        try:
+            negative_sales = (pd.to_numeric(df["sales"], errors='coerce') < 0).sum()
+            if negative_sales > 0:
+                errors.append({"type": "Negative Sales", "detail": f"Found {int(negative_sales)} row(s) with negative sales"})
+        except:
+            errors.append({"type": "Data Type Error", "detail": "Sales column contains invalid numeric data"})
+
+        # 4. Check Negative Stock
+        try:
+            negative_stock = (pd.to_numeric(df["stock"], errors='coerce') < 0).sum()
+            if negative_stock > 0:
+                errors.append({"type": "Negative Stock", "detail": f"Found {int(negative_stock)} row(s) with negative stock"})
+        except:
+            errors.append({"type": "Data Type Error", "detail": "Stock column contains invalid numeric data"})
+
+        # 5. Check Invalid Dates
+        try:
+            invalid_dates = df["date"].isnull().sum()
+            parsed_dates = pd.to_datetime(df["date"], errors='coerce')
+            unparseable = parsed_dates.isnull().sum() - invalid_dates
+            if unparseable > 0:
+                errors.append({"type": "Invalid Dates", "detail": f"Found {int(unparseable)} row(s) with unparseable dates"})
+        except:
+            errors.append({"type": "Data Type Error", "detail": "Date column contains invalid formats"})
+
+        return {
+            "total_rows": int(len(df)),
+            "error_count": len(errors),
+            "errors": errors,
+            "message": "Error detection complete"
+        }
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return {"error": str(e)}
 
 # ================= EXCEL UPLOAD =================
 @app.post("/upload-excel/")
@@ -378,38 +490,42 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
                 "error": "Not enough data"
             }
 
-        features_df = create_features(df).dropna()
+        future_preds = []
+        df_future = df.copy()
 
-        if len(features_df) == 0:
-            return {
-                "error": "Feature dataframe empty"
-            }
-
-        xgb_preds = predict_xgboost(
-            xgb_model,
-            features_df
-        )
-
-        lstm_preds = predict_lstm(
-            lstm_model,
-            lstm_scaler,
-            df
-        )
-
-        hybrid_preds = hybrid_forecast(
-            xgb_preds,
-            None,
-            lstm_preds
-        )
-
-        result = [
-            round(float(x), 2)
-            for x in hybrid_preds[-5:]
-        ]
+        for step in range(5):
+            last_row = df_future.iloc[-1]
+            next_date = last_row["date"] + pd.Timedelta(days=1)
+            
+            # Create a new row
+            new_row = pd.DataFrame([{
+                "date": next_date,
+                "sales": last_row["sales"],  # Dummy value
+                "promotion": last_row["promotion"],
+                "stock": last_row["stock"],
+                "holiday": last_row["holiday"]
+            }])
+            
+            df_future = pd.concat([df_future, new_row], ignore_index=True)
+            
+            # Predict XGBoost
+            xgb_preds = predict_xgboost(xgb_model, df_future)
+            p_xgb = float(xgb_preds[-1])
+            
+            # Predict LSTM
+            lstm_preds = predict_lstm(lstm_model, lstm_scaler, df_future)
+            p_lstm = float(lstm_preds[-1]) if len(lstm_preds) > 0 else p_xgb
+            
+            # Hybrid
+            p_hybrid = 0.7 * p_xgb + 0.3 * p_lstm
+            future_preds.append(round(p_hybrid, 2))
+            
+            # Update dummy sales with prediction
+            df_future.at[len(df_future)-1, "sales"] = p_hybrid
 
         return {
-            "hybrid_prediction": result,
-            "count": len(result)
+            "hybrid_prediction": future_preds,
+            "count": len(future_preds)
         }
 
     except Exception as e:
@@ -446,7 +562,7 @@ def evaluate_models_api(db: Session = Depends(get_db)):
 
         xgb_preds = predict_xgboost(
             xgb_model,
-            features_df
+            df
         )
 
         lstm_preds = predict_lstm(
@@ -478,6 +594,103 @@ def evaluate_models_api(db: Session = Depends(get_db)):
         return {
             "error": str(e)
         }
+
+# ================= AI STRATEGIC INSIGHTS =================
+@app.get("/generate-insights/")
+def generate_insights_api(db: Session = Depends(get_db)):
+    try:
+        df = get_clean_df(db)
+
+        if len(df) < 14:
+            return {"error": "Need at least 14 days of data to generate insights"}
+
+        insights = []
+
+        # 1. Promotional Impact
+        promo_sales = df[df["promotion"] == True]["sales"].mean()
+        non_promo_sales = df[df["promotion"] == False]["sales"].mean()
+        
+        if pd.notna(promo_sales) and pd.notna(non_promo_sales) and non_promo_sales > 0:
+            if promo_sales > non_promo_sales * 1.15:
+                increase = round(((promo_sales - non_promo_sales) / non_promo_sales) * 100)
+                insights.append({
+                    "type": "positive",
+                    "title": "Promotions are Working",
+                    "text": f"Promotional days see a {increase}% increase in average sales. Consider increasing marketing spend on strategic campaigns.",
+                    "icon": "bx-trending-up"
+                })
+            elif promo_sales < non_promo_sales * 1.05:
+                insights.append({
+                    "type": "warning",
+                    "title": "Weak Promo Impact",
+                    "text": "Recent promotions haven't significantly boosted sales. Review your campaign targeting or offer value.",
+                    "icon": "bx-target-lock"
+                })
+
+        # 2. Inventory Health
+        min_stock = df.tail(7)["stock"].min()
+        if min_stock < 20:
+            insights.append({
+                "type": "danger",
+                "title": "Critical Stockout Risk",
+                "text": f"Inventory levels dropped to {min_stock} units recently. Increase buffer stock to prevent lost sales.",
+                "icon": "bx-error"
+            })
+        elif min_stock > 100:
+            insights.append({
+                "type": "positive",
+                "title": "Healthy Inventory",
+                "text": "Buffer stock is strong, preventing potential out-of-stock lost revenue.",
+                "icon": "bx-check-shield"
+            })
+
+        # 3. Trend Momentum
+        recent_avg = df.tail(7)["sales"].mean()
+        past_avg = df.iloc[-14:-7]["sales"].mean()
+        
+        if pd.notna(recent_avg) and pd.notna(past_avg) and past_avg > 0:
+            if recent_avg > past_avg * 1.1:
+                insights.append({
+                    "type": "positive",
+                    "title": "Sales Surging",
+                    "text": "7-day sales average is up significantly compared to the previous week. Capitalize on this momentum.",
+                    "icon": "bx-line-chart"
+                })
+            elif recent_avg < past_avg * 0.9:
+                insights.append({
+                    "type": "warning",
+                    "title": "Dropping Momentum",
+                    "text": "7-day average sales have dropped. Immediate promotional intervention is recommended.",
+                    "icon": "bx-trending-down"
+                })
+
+        # 4. Weekend vs Weekday
+        df["is_weekend"] = df["date"].dt.dayofweek >= 5
+        weekend_sales = df[df["is_weekend"]]["sales"].mean()
+        weekday_sales = df[~df["is_weekend"]]["sales"].mean()
+        
+        if pd.notna(weekend_sales) and pd.notna(weekday_sales) and weekday_sales > 0:
+            if weekend_sales > weekday_sales * 1.2:
+                insights.append({
+                    "type": "info",
+                    "title": "Weekend Dominance",
+                    "text": "Sales spike significantly on weekends. Align ad-spend and staff schedules accordingly.",
+                    "icon": "bx-calendar-star"
+                })
+
+        if not insights:
+            insights.append({
+                "type": "info",
+                "title": "Stable Baseline",
+                "text": "Sales metrics are stable with no extreme anomalies detected. Keep monitoring the dashboard.",
+                "icon": "bx-info-circle"
+            })
+
+        return {"insights": insights}
+
+    except Exception as e:
+        print(traceback.format_exc())
+        return {"error": str(e)}
 # ================= LOAD MODELS =================
 @app.on_event("startup")
 def load_models():
