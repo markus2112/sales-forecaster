@@ -1,7 +1,14 @@
 import traceback
+import os
+import json
 from pathlib import Path
 import pandas as pd
 import io
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
+load_dotenv()
 
 from fastapi import FastAPI, Depends, UploadFile, File, Response
 from fastapi.responses import FileResponse
@@ -491,6 +498,7 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
             }
 
         future_preds = []
+        future_dates = []
         df_future = df.copy()
 
         for step in range(5):
@@ -519,12 +527,14 @@ def hybrid_forecast_api(db: Session = Depends(get_db)):
             # Hybrid
             p_hybrid = 0.7 * p_xgb + 0.3 * p_lstm
             future_preds.append(round(p_hybrid, 2))
+            future_dates.append(next_date.strftime('%Y-%m-%d'))
             
             # Update dummy sales with prediction
             df_future.at[len(df_future)-1, "sales"] = p_hybrid
 
         return {
             "hybrid_prediction": future_preds,
+            "future_dates": future_dates,
             "count": len(future_preds)
         }
 
@@ -604,6 +614,57 @@ def generate_insights_api(db: Session = Depends(get_db)):
         if len(df) < 14:
             return {"error": "Need at least 14 days of data to generate insights"}
 
+        # Attempt OpenAI Insights first
+        try:
+            api_key = os.environ.get("OPENAI_API_KEY")
+            if not api_key:
+                raise ValueError("No OpenAI API key found")
+                
+            client = OpenAI(api_key=api_key)
+            
+            promo_sales = df[df["promotion"] == True]["sales"].mean()
+            non_promo_sales = df[df["promotion"] == False]["sales"].mean()
+            min_stock = df.tail(7)["stock"].min()
+            recent_avg = df.tail(7)["sales"].mean()
+            past_avg = df.iloc[-14:-7]["sales"].mean()
+            
+            summary = f"""
+            Recent 14 days of data summary:
+            - Min Stock: {min_stock}
+            - Recent 7-day Avg Sales: {recent_avg:.2f if pd.notna(recent_avg) else 0}
+            - Previous 7-day Avg Sales: {past_avg:.2f if pd.notna(past_avg) else 0}
+            - Promo Avg Sales: {promo_sales:.2f if pd.notna(promo_sales) else 0}
+            - Non-Promo Avg Sales: {non_promo_sales:.2f if pd.notna(non_promo_sales) else 0}
+            """
+
+            prompt = f"""
+            You are an expert retail strategist. Based on this data summary:
+            {summary}
+
+            Provide 2-3 strategic insights or advice points. 
+            Format EXACTLY as a JSON array of objects with keys: "type" (choose one: positive, warning, danger, info), "title", "text", "icon" (a boxicons class like bx-trending-up, bx-target-lock, bx-error, bx-check-shield, bx-info-circle).
+            Only return JSON. No markdown backticks.
+            """
+
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+            )
+            
+            content = response.choices[0].message.content.strip()
+            if content.startswith("```json"):
+                content = content.replace("```json", "").replace("```", "")
+            elif content.startswith("```"):
+                content = content.replace("```", "")
+                
+            chat_insights = json.loads(content)
+            return {"insights": chat_insights}
+            
+        except Exception as e:
+            print("OpenAI fallback triggered:", str(e))
+            
+        # --- Fallback Heuristic Logic ---
         insights = []
 
         # 1. Promotional Impact
@@ -704,4 +765,4 @@ def load_models():
         print("Saved models loaded successfully")
 
     except:
-        print("No saved models found")
+        pass

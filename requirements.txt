@@ -10,3 +10,5 @@ pandas
 tensorflow
 joblib
 openpyxl
+python-multipart
+openai

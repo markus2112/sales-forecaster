@@ -9,7 +9,7 @@ from sklearn.preprocessing import RobustScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
 from tensorflow.keras.models import Sequential, load_model
-from tensorflow.keras.layers import LSTM, Dense, Dropout
+from tensorflow.keras.layers import LSTM, Dense, Dropout, Bidirectional
 from tensorflow.keras.callbacks import EarlyStopping
 
 from backend.features import create_features
@@ -54,6 +54,7 @@ def train_xgboost(df):
         colsample_bytree=0.8,
         reg_alpha=0.1,
         reg_lambda=1.0,
+        early_stopping_rounds=30,
         random_state=42
     )
 
@@ -65,27 +66,36 @@ def train_xgboost(df):
 # ================= LSTM =================
 def train_lstm(df):
 
-    df = clean_data(df)
+    df = create_features(clean_data(df))
+    
+    feature_cols = [c for c in df.columns if c != "date"]
+    data_values = df[feature_cols].values
+    sales_idx = feature_cols.index("sales")
 
-    sales = df["sales"].values.reshape(-1, 1)
+    scaler_X = RobustScaler()
+    scaler_y = RobustScaler()
+    
+    data_scaled = scaler_X.fit_transform(data_values)
+    
+    sales_values = df["sales"].values.reshape(-1, 1)
+    scaler_y.fit(sales_values)
 
-    scaler = RobustScaler()
-    sales_scaled = scaler.fit_transform(sales)
-
-    if len(sales_scaled) <= WINDOW:
+    if len(data_scaled) <= WINDOW:
         raise ValueError("Not enough data for LSTM")
 
     X, y = [], []
 
-    for i in range(len(sales_scaled) - WINDOW):
-        X.append(sales_scaled[i:i + WINDOW])
-        y.append(sales_scaled[i + WINDOW])
+    for i in range(len(data_scaled) - WINDOW):
+        X.append(data_scaled[i:i + WINDOW])
+        y.append(data_scaled[i + WINDOW, sales_idx])
 
-    X = np.array(X).reshape(-1, WINDOW, 1)
+    X = np.array(X)
     y = np.array(y)
+    
+    num_features = X.shape[2]
 
     model = Sequential([
-        LSTM(64, return_sequences=True, input_shape=(WINDOW, 1)),
+        Bidirectional(LSTM(64, return_sequences=True), input_shape=(WINDOW, num_features)),
         Dropout(0.2),
         LSTM(32),
         Dense(1)
@@ -107,8 +117,14 @@ def train_lstm(df):
         verbose=0,
         callbacks=[early_stop]
     )
+    
+    scalers = {
+        "X": scaler_X,
+        "y": scaler_y,
+        "features": feature_cols
+    }
 
-    return model, scaler
+    return model, scalers
 
 
 # ================= PREDICT =================
@@ -122,25 +138,33 @@ def predict_xgboost(model, df):
     return np.expm1(preds)
 
 
-def predict_lstm(model, scaler, df):
+def predict_lstm(model, scalers, df):
 
-    df = clean_data(df)
+    df = create_features(clean_data(df))
+    
+    scaler_X = scalers["X"]
+    scaler_y = scalers["y"]
+    feature_cols = scalers["features"]
 
-    sales = df["sales"].values.reshape(-1, 1)
-    sales_scaled = scaler.transform(sales)
+    for col in feature_cols:
+        if col not in df.columns:
+            df[col] = 0
 
-    if len(sales_scaled) <= WINDOW:
+    data_values = df[feature_cols].values
+    data_scaled = scaler_X.transform(data_values)
+
+    if len(data_scaled) <= WINDOW:
         return np.array([])
 
     X = []
 
-    for i in range(len(sales_scaled) - WINDOW):
-        X.append(sales_scaled[i:i + WINDOW])
+    for i in range(len(data_scaled) - WINDOW):
+        X.append(data_scaled[i:i + WINDOW])
 
-    X = np.array(X).reshape(-1, WINDOW, 1)
+    X = np.array(X)
 
-    preds = model.predict(X)
-    preds = scaler.inverse_transform(preds)
+    preds = model.predict(X, verbose=0)
+    preds = scaler_y.inverse_transform(preds)
 
     return preds.flatten()
 
@@ -156,7 +180,7 @@ def hybrid_forecast(xgb_preds, lgb_preds=None, lstm_preds=None):
     xgb_preds = np.array(xgb_preds[-length:])
     lstm_preds = np.array(lstm_preds[-length:])
 
-    return 0.7 * xgb_preds + 0.3 * lstm_preds
+    return 0.5 * xgb_preds + 0.5 * lstm_preds
 
 
 # ================= EVALUATION =================

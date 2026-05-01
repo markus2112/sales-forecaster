@@ -118,8 +118,9 @@
                     </div>
                     
                     <div class="glass-panel half-width feature-panel">
-                        <div class="section-header">
+                        <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
                             <h2>Future Forecast Panel</h2>
+                            <div style="font-size: 0.9rem; color: var(--text-muted);">Total: <span id="totalForecastValue" style="color: var(--success); font-weight: bold;">--</span></div>
                         </div>
                         <div class="forecast-list" id="futureForecastList">
                             <div class="forecast-item">
@@ -129,6 +130,22 @@
                         </div>
                         <button class="btn-primary w-full mt-1" data-action="forecast">Generate Detailed Report</button>
                     </div>
+                </div>
+            </section>
+
+            <!-- AI Strategic Advisory Section -->
+            <section id="advisory" class="advisory-section">
+                <div class="section-title">
+                    <h2><i class='bx bx-brain'></i> AI Strategic Advisory</h2>
+                    <p>Actionable insights based on your existing data and sales momentum.</p>
+                </div>
+                <div class="insights-grid" id="insightsContainer">
+                    <div class="insight-card glass-panel" style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">
+                        Click "Generate Advisory Insights" to analyze your data.
+                    </div>
+                </div>
+                <div style="text-align: center;">
+                    <button class="btn-primary" data-action="insights"><i class='bx bx-analyse'></i> Generate Advisory Insights</button>
                 </div>
             </section>
 

@@ -410,11 +410,19 @@ document.addEventListener("DOMContentLoaded", function () {
 
             if (latestForecast.length) {
                 const total = latestForecast.reduce((a, b) => a + b, 0);
-                document.getElementById("totalForecastValue").innerText =
-                    "$" + total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                const totalEl = document.getElementById("totalForecastValue");
+                if (totalEl) {
+                    totalEl.innerText = "₹" + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                }
                 
+                const futureDates = data.future_dates || [];
+
                 // Update chart
-                forecastChart.data.labels = latestForecast.map((_, i) => `T+${i+1}`);
+                forecastChart.data.labels = latestForecast.map((_, i) => {
+                    return futureDates[i] 
+                        ? new Date(futureDates[i]).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) 
+                        : `T+${i+1}`;
+                });
                 forecastChart.data.datasets[0].data = latestForecast;
                 forecastChart.update();
 
@@ -422,11 +430,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 const list = document.getElementById("futureForecastList");
                 list.innerHTML = "";
                 latestForecast.slice(0, 5).forEach((val, i) => {
+                    const dateStr = futureDates[i] 
+                        ? new Date(futureDates[i]).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) 
+                        : `Step ${i+1}`;
                     const item = document.createElement("div");
                     item.className = "forecast-item";
                     item.innerHTML = `
-                        <div class="date">Step ${i+1}</div>
-                        <div class="proj-value">$${val.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                        <div class="date">${dateStr}</div>
+                        <div class="proj-value">₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
                     `;
                     list.appendChild(item);
                 });
@@ -471,6 +482,45 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
+    // ================= AI INSIGHTS =================
+    async function generateInsights() {
+        showMessage("Analyzing data for insights...");
+        try {
+            const response = await fetch("/generate-insights/");
+            const data = await response.json();
+
+            if (data.error) {
+                showMessage(data.error);
+                return;
+            }
+
+            const container = document.getElementById("insightsContainer");
+            container.innerHTML = "";
+
+            if (data.insights && data.insights.length > 0) {
+                data.insights.forEach(insight => {
+                    const card = document.createElement("div");
+                    card.className = `insight-card glass-panel ${insight.type}`;
+                    card.innerHTML = `
+                        <div class="insight-icon"><i class='bx ${insight.icon}'></i></div>
+                        <div class="insight-content">
+                            <h3>${insight.title}</h3>
+                            <p>${insight.text}</p>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+                showMessage("Insights generated successfully");
+            } else {
+                container.innerHTML = `<div class="insight-card glass-panel" style="grid-column: 1 / -1; text-align: center; padding: 2rem;">No significant insights found.</div>`;
+                showMessage("No insights available");
+            }
+        } catch (error) {
+            console.log(error);
+            showMessage("Failed to generate insights");
+        }
+    }
+
     // ================= BUTTON EVENTS =================
     const buttons = document.querySelectorAll("[data-action]");
 
@@ -483,6 +533,7 @@ document.addEventListener("DOMContentLoaded", function () {
             if (action === "lstm") trainLSTM();
             if (action === "forecast") hybridForecast();
             if (action === "evaluate") evaluateModels();
+            if (action === "insights") generateInsights();
         });
     });
 
