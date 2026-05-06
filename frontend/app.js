@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     backgroundColor: 'rgba(11, 9, 20, 0.9)',
                     titleColor: '#fff',
                     bodyColor: '#c4b5fd',
-                    borderColor: 'rgba(16, 185, 129, 0.2)',
+                    borderColor: 'rgba(85, 107, 47, 0.2)',
                     borderWidth: 1,
                     padding: 10,
                     cornerRadius: 8
@@ -35,7 +35,7 @@ document.addEventListener("DOMContentLoaded", function () {
             scales: {
                 y: {
                     grid: {
-                        color: 'rgba(255, 255, 255, 0.05)',
+                        color: 'rgba(0, 0, 0, 0.05)',
                         drawBorder: false
                     }
                 },
@@ -57,12 +57,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     {
                         label: 'Forecasted (Hybrid)',
                         data: [],
-                        borderColor: '#10b981',
+                        borderColor: '#556b2f',
                         borderWidth: 2,
                         tension: 0.4,
-                        pointBackgroundColor: '#10b981',
+                        pointBackgroundColor: '#556b2f',
                         fill: true,
-                        backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                        backgroundColor: 'rgba(85, 107, 47, 0.1)',
                     }
                 ]
             },
@@ -77,7 +77,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 datasets: [{
                     label: 'Historical Sales',
                     data: [1200, 1500, 1800, 1400, 2500, 2100], // Mock data until fetched
-                    backgroundColor: 'rgba(139, 92, 246, 0.7)',
+                    backgroundColor: 'rgba(220, 38, 38, 0.7)',
                     borderRadius: 4,
                     barPercentage: 0.5
                 }]
