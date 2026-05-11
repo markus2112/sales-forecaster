@@ -117,18 +117,33 @@
                         </div>
                     </div>
                     
-                    <div class="glass-panel half-width feature-panel">
+                    <div class="glass-panel half-width feature-panel forecast-enhanced-panel">
                         <div class="section-header" style="display: flex; justify-content: space-between; align-items: center;">
-                            <h2>Future Forecast Panel</h2>
+                            <h2><i class='bx bx-bar-chart-alt-2' style="color: var(--primary); margin-right: 0.4rem;"></i>Future Forecast Panel</h2>
                             <div style="font-size: 0.9rem; color: var(--text-muted);">Total: <span id="totalForecastValue" style="color: var(--success); font-weight: bold;">--</span></div>
                         </div>
+
+                        <!-- Toggle Switch -->
+                        <div class="forecast-toggle-row">
+                            <div class="toggle-group">
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="promoHolidayToggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <span class="toggle-label" id="toggleLabel">With Promotions & Holidays</span>
+                            </div>
+                            <div class="promo-uplift-badges" id="upliftBadges">
+                                <!-- Filled dynamically -->
+                            </div>
+                        </div>
+
                         <div class="forecast-list" id="futureForecastList">
                             <div class="forecast-item">
                                 <div class="date">Awaiting Forecast...</div>
                                 <div class="proj-value">--</div>
                             </div>
                         </div>
-                        <button class="btn-primary w-full mt-1" data-action="forecast">Generate Detailed Report</button>
+                        <button class="btn-primary w-full mt-1" data-action="forecast"><i class='bx bx-analyse'></i> Generate Detailed Forecast</button>
                     </div>
                 </div>
             </section>

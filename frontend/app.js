@@ -5,6 +5,7 @@ document.addEventListener("DOMContentLoaded", function () {
     let latestFeatures = [];
     let forecastChart = null;
     let historicalChart = null;
+    let forecastCompareData = null; // Stores both with/without promo data
 
     // ================= INITIALIZE CHARTS =================
     function initCharts() {
@@ -394,11 +395,11 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // ================= HYBRID FORECAST =================
+    // ================= HYBRID FORECAST (ENHANCED) =================
     async function hybridForecast() {
         showMessage("Generating Hybrid Forecast...");
         try {
-            const response = await fetch("/hybrid-forecast/");
+            const response = await fetch("/hybrid-forecast-compare/");
             const data = await response.json();
 
             if (data.error) {
@@ -406,50 +407,149 @@ document.addEventListener("DOMContentLoaded", function () {
                 return;
             }
 
-            latestForecast = data.hybrid_prediction || [];
+            forecastCompareData = data;
 
-            if (latestForecast.length) {
-                const total = latestForecast.reduce((a, b) => a + b, 0);
-                const totalEl = document.getElementById("totalForecastValue");
-                if (totalEl) {
-                    totalEl.innerText = "₹" + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+            // Show uplift badges
+            const badgesEl = document.getElementById("upliftBadges");
+            if (badgesEl && data.meta) {
+                let badgesHtml = "";
+                if (data.meta.promo_uplift_pct !== 0) {
+                    badgesHtml += `<span class="uplift-badge promo"><i class='bx bx-purchase-tag-alt'></i> Promo ${data.meta.promo_uplift_pct > 0 ? "+" : ""}${data.meta.promo_uplift_pct}%</span>`;
                 }
-                
-                const futureDates = data.future_dates || [];
-
-                // Update chart
-                forecastChart.data.labels = latestForecast.map((_, i) => {
-                    return futureDates[i] 
-                        ? new Date(futureDates[i]).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }) 
-                        : `T+${i+1}`;
-                });
-                forecastChart.data.datasets[0].data = latestForecast;
-                forecastChart.update();
-
-                // Update future forecast list
-                const list = document.getElementById("futureForecastList");
-                list.innerHTML = "";
-                latestForecast.slice(0, 5).forEach((val, i) => {
-                    const dateStr = futureDates[i] 
-                        ? new Date(futureDates[i]).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' }) 
-                        : `Step ${i+1}`;
-                    const item = document.createElement("div");
-                    item.className = "forecast-item";
-                    item.innerHTML = `
-                        <div class="date">${dateStr}</div>
-                        <div class="proj-value">₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
-                    `;
-                    list.appendChild(item);
-                });
+                if (data.meta.holiday_uplift_pct !== 0) {
+                    badgesHtml += `<span class="uplift-badge holiday"><i class='bx bx-calendar-event'></i> Holiday ${data.meta.holiday_uplift_pct > 0 ? "+" : ""}${data.meta.holiday_uplift_pct}%</span>`;
+                }
+                badgesEl.innerHTML = badgesHtml;
             }
 
+            // Render based on current toggle state
+            const toggle = document.getElementById("promoHolidayToggle");
+            const withPromo = toggle ? toggle.checked : true;
+            renderForecastPanel(withPromo);
+
             showMessage("Hybrid forecast generated successfully");
-            console.log("Forecast:", data);
+            console.log("Forecast Compare:", data);
 
         } catch (error) {
             console.log(error);
             showMessage("Forecast generation failed");
         }
+    }
+
+    // ================= RENDER FORECAST PANEL =================
+    function renderForecastPanel(withPromo) {
+        if (!forecastCompareData) return;
+
+        const dataset = withPromo ? forecastCompareData.with_promo : forecastCompareData.without_promo;
+        const baselineDataset = forecastCompareData.without_promo;
+        
+        const predictions = dataset.predictions;
+        const baselinePredictions = baselineDataset.predictions;
+        const dates = dataset.dates;
+        const reasons = dataset.reasons;
+
+        // Update toggle label
+        const labelEl = document.getElementById("toggleLabel");
+        if (labelEl) {
+            labelEl.textContent = withPromo ? "With Promotions & Holidays" : "Without Promotions & Holidays";
+        }
+
+        // Update total
+        const total = predictions.reduce((a, b) => a + b, 0);
+        const totalEl = document.getElementById("totalForecastValue");
+        if (totalEl) {
+            totalEl.innerText = "₹" + total.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        }
+
+        // Update chart
+        forecastChart.data.labels = predictions.map((_, i) => {
+            return dates[i]
+                ? new Date(dates[i]).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' })
+                : `T+${i + 1}`;
+        });
+        forecastChart.data.datasets[0].data = predictions;
+        forecastChart.update();
+
+        // Update forecast list with reasons
+        const list = document.getElementById("futureForecastList");
+        list.innerHTML = "";
+
+        predictions.forEach((val, i) => {
+            const dateStr = dates[i]
+                ? new Date(dates[i]).toLocaleDateString('en-IN', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })
+                : `Step ${i + 1}`;
+
+            const baseVal = baselinePredictions[i];
+            const diff = val - baseVal;
+            const diffPct = baseVal > 0 ? ((diff / baseVal) * 100).toFixed(1) : 0;
+            
+            const reason = reasons[i];
+            const changePct = reason.change_pct;
+            const isUp = changePct >= 0;
+
+            // Build reason tags HTML
+            let reasonTagsHtml = "";
+            if (reason.has_promo) {
+                reasonTagsHtml += `<span class="reason-tag promo"><i class='bx bx-purchase-tag-alt'></i> Promo</span>`;
+            }
+            if (reason.has_holiday) {
+                reasonTagsHtml += `<span class="reason-tag holiday"><i class='bx bx-calendar-event'></i> Holiday</span>`;
+            }
+            if (reason.is_weekend) {
+                reasonTagsHtml += `<span class="reason-tag weekend"><i class='bx bx-calendar-week'></i> Weekend</span>`;
+            }
+            if (changePct > 0) {
+                reasonTagsHtml += `<span class="reason-tag trend-up"><i class='bx bx-trending-up'></i> +${changePct}%</span>`;
+            } else if (changePct < 0) {
+                reasonTagsHtml += `<span class="reason-tag trend-down"><i class='bx bx-trending-down'></i> ${changePct}%</span>`;
+            }
+            
+            // Impact tag
+            if (withPromo && diff > 0) {
+                reasonTagsHtml += `<span class="reason-tag impact"><i class='bx bx-bolt-circle'></i> Impact: +₹${diff.toFixed(0)} (${diffPct}%)</span>`;
+            }
+
+            if (!reason.has_promo && !reason.has_holiday && !reason.is_weekend && changePct === 0) {
+                reasonTagsHtml += `<span class="reason-tag baseline"><i class='bx bx-minus'></i> Baseline</span>`;
+            }
+
+            const item = document.createElement("div");
+            item.className = "forecast-item-enhanced comparison-mode";
+            item.style.animationDelay = `${i * 80}ms`;
+            
+            let valHtml = `₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (withPromo && diff > 0) {
+                valHtml = `
+                    <div class="val-comparison">
+                        <span class="base-strike">₹${baseVal.toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+                        <span class="promo-val">₹${val.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                    </div>
+                `;
+            }
+
+            item.innerHTML = `
+                <div class="forecast-item-top">
+                    <div class="date">${dateStr}</div>
+                    <div class="proj-value ${isUp ? 'up' : 'down'}">
+                        ${valHtml}
+                        <span class="change-badge ${isUp ? 'up' : 'down'}">${isUp ? '▲' : '▼'} ${Math.abs(changePct)}%</span>
+                    </div>
+                </div>
+                <div class="forecast-reason-row">
+                    ${reasonTagsHtml}
+                </div>
+            `;
+            list.appendChild(item);
+        });
+    }
+
+
+    // ================= TOGGLE SWITCH EVENT =================
+    const promoToggle = document.getElementById("promoHolidayToggle");
+    if (promoToggle) {
+        promoToggle.addEventListener("change", function () {
+            renderForecastPanel(this.checked);
+        });
     }
 
     // ================= EVALUATE MODELS =================
